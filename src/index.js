@@ -10,6 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const index_1 = require("swagger-cognitive-sevices/dist/index");
 ;
+const timeoutAsync = (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+};
 class PersonGroupMulti {
     /**
      * @param ocpApimSubscriptionKey your ocpApimSubscriptionKey for FaceAPI cognitve services
@@ -69,6 +72,7 @@ class PersonGroupMulti {
                     //let's try to create new person group. We need to mark this one as full. 
                     console.log(`Reached subscription level limit or person group level limit for group ${pG.personGroupId}`);
                     pG.personsCount = this._personGroupLimit;
+                    timeoutAsync(this._retryTimeout);
                     return this.addPersonAsync(personName, retryCount + 1);
                 }
                 if (error.status === 409 || error.status === 429) {
@@ -76,6 +80,7 @@ class PersonGroupMulti {
                         'Concurrent operation conflict on resource. or' +
                         'Rate limit is exceeded. ' +
                         `Retrying to create person ${personName}`);
+                    timeoutAsync(this._retryTimeout);
                     return this.addPersonAsync(personName, retryCount + 1);
                 }
                 throw e; //we need to rethrow for Promise to fail
@@ -93,6 +98,7 @@ class PersonGroupMulti {
                 console.log(`Error while trying to get list of person groups.`);
                 const error = e;
                 if (~[403, 409, 429].indexOf(error.status)) {
+                    timeoutAsync(this._retryTimeout);
                     return this.identifyPersonAsync(params, retryCount + 1);
                 }
                 throw e;
@@ -133,6 +139,7 @@ class PersonGroupMulti {
                 const error = e;
                 if (error.status === 429) {
                     console.log(`Rate limit is exceeded while trying to create ${personGroupId} person group.`);
+                    timeoutAsync(this._retryTimeout);
                     return yield this.getNewPersonGroupAsync(retryCount + 1);
                 }
                 if (error.status === 409) {
@@ -143,6 +150,7 @@ class PersonGroupMulti {
                     }
                     else {
                         //ConcurrentOperationConflict
+                        timeoutAsync(this._retryTimeout);
                         return yield this.getNewPersonGroupAsync(retryCount + 1);
                     }
                 }
@@ -165,6 +173,7 @@ class PersonGroupMulti {
                 if (~[403 /*Out of call volume quota.*/,
                     409 /*Person group 'sample_group' is under training.*/,
                     429 /*Rate limit is exceeded.*/].indexOf(error.status)) {
+                    timeoutAsync(this._retryTimeout);
                     return this._faceIdentifyPostWithRetryAsync(params, retryCount + 1);
                 }
             }

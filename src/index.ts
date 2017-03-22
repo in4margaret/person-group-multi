@@ -26,6 +26,10 @@ interface PersonIdentifyResultPartMulti extends PersonIdentifyResultPart {
     personGroupId: string
 }
 
+const timeoutAsync = (ms: number) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 type PersonIdentifyResult = PersonIdentifyResultPart[];
 type PersonIdentifyResultMulti = PersonIdentifyResultPartMulti[];
 
@@ -115,6 +119,7 @@ export class PersonGroupMulti {
                 //let's try to create new person group. We need to mark this one as full. 
                 console.log(`Reached subscription level limit or person group level limit for group ${pG.personGroupId}`);
                 pG.personsCount = this._personGroupLimit;
+                timeoutAsync(this._retryTimeout);
                 return this.addPersonAsync(personName, retryCount + 1);
             }
             if (error.status === 409 || error.status === 429) { //'The person group is still under training. Try again after training completed.' or 'Concurrent operation conflict on resource.'
@@ -122,6 +127,7 @@ export class PersonGroupMulti {
                     'Concurrent operation conflict on resource. or' +
                     'Rate limit is exceeded. ' +
                     `Retrying to create person ${personName}`);
+                timeoutAsync(this._retryTimeout);
                 return this.addPersonAsync(personName, retryCount + 1);
             }
 
@@ -138,6 +144,7 @@ export class PersonGroupMulti {
             console.log(`Error while trying to get list of person groups.`);
             const error = e as FaceAPIError;
             if (~[403, 409, 429].indexOf(error.status)) {
+                timeoutAsync(this._retryTimeout);
                 return this.identifyPersonAsync(params, retryCount + 1);
             }
             throw e;
@@ -177,6 +184,7 @@ export class PersonGroupMulti {
             const error = e as FaceAPIError;
             if (error.status === 429) { // Rate limit is exceeded.
                 console.log(`Rate limit is exceeded while trying to create ${personGroupId} person group.`);
+                timeoutAsync(this._retryTimeout);
                 return await this.getNewPersonGroupAsync(retryCount + 1);
             }
             if (error.status === 409) { //PersonGroupExists	Person group already exists. or ConcurrentOperationConflict	Concurrent operation conflict on resource.                
@@ -186,6 +194,7 @@ export class PersonGroupMulti {
                     return pGResult;
                 } else {
                     //ConcurrentOperationConflict
+                    timeoutAsync(this._retryTimeout);
                     return await this.getNewPersonGroupAsync(retryCount + 1);
                 }
             }
@@ -209,6 +218,7 @@ export class PersonGroupMulti {
             if (~[403/*Out of call volume quota.*/,
                 409/*Person group 'sample_group' is under training.*/,
                 429/*Rate limit is exceeded.*/].indexOf(error.status)) {
+                timeoutAsync(this._retryTimeout);
                 return this._faceIdentifyPostWithRetryAsync(params, retryCount + 1);
             }
         }

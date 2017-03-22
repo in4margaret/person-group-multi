@@ -1,0 +1,13 @@
+{
+  "name": "person-group-multi",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "author": {
+    "name": "Ostapchuk Margaryta",
+    "email": "in4margaret@gmail.com"
+  },
+  "dependencies": {
+    "swagger-cognitive-sevices": "^0.0.1"
+  }
+}
